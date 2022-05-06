@@ -1,0 +1,94 @@
+name: "OpenAPI Diff Action"
+author: "Dmitry Vasiliev"
+description: "A GitHub Action to identify differences between OpenAPI specifications. It uses OpenAPITools/openapi-diff."
+branding:
+  icon: 'check-square'
+  color: 'blue'
+
+inputs:
+  old-spec:
+    description: "Old specification filename"
+    required: true
+  new-spec:
+    description: "New specification filename"
+    required: true
+  header:
+    description: "Use given header for authorisation"
+    required: false
+    default: ""
+  query:
+    description: "Use query param for authorisation"
+    required: false
+    default: ""
+  log:
+    description: "Use given level for log (TRACE, DEBUG, INFO, WARN, ERROR, OFF)"
+    required: false
+    default: "ERROR"
+  markdown:
+    description: "Export diff as markdown in given file"
+    required: false
+    default: ".tmp/markdown"
+  json:
+    description: "Export diff as JSON in given file"
+    required: false
+    default: ".tmp/json"
+  text:
+    description: "Export diff as text in given file"
+    required: false
+    default: '.tmp/text'
+  html:
+    description: "Export diff as HTML in given file"
+    required: false
+    default: '.tmp/html'
+  fail-on:
+    description: "Fail if API changed but is backward compatible ('changed' value) or changes broke backward compatibility ('incompatible' value)"
+    required: false
+    default: ""
+
+outputs:
+  state:
+    description: "Output diff state: no_changes, incompatible, compatible"
+    value: ${{steps.state.outputs.compare_state}}
+
+runs:
+  using: composite
+  steps:
+    - name: "Run openapi-diff tool"
+      run: |
+        docker run -v "$(pwd):/specs" --rm openapitools/openapi-diff:2.0.1 \
+          /specs/${{inputs.old-spec}} \
+          /specs/${{inputs.new-spec}} \
+          `if [[ ${{inputs.header}} != '' ]]; then --header ${{inputs.header}}; fi` \
+          `if [[ ${{inputs.query}} != '' ]]; then --query ${{inputs.query}}; fi` \
+          `if [[ ${{inputs.fail-on}} != '' ]]; then --fail-on-${{inputs.fail-on}}; fi` \
+          --markdown /specs/${{inputs.markdown}} \
+          --json /specs/${{inputs.json}} \
+          --text /specs/${{inputs.text}} \
+          --html /specs/${{inputs.html}}
+      shell: bash
+    - name: "Read output JSON file"
+      id: output_json_file
+      uses: juliangruber/read-file-action@v1
+      with:
+        path: ${{inputs.json}}
+    - name: "Detect compare state"
+      id: "state"
+      run: |
+        compatible_val="${{fromJson(steps.output_json_file.outputs.content).compatible}}"
+        incompatible_val="${{fromJson(steps.output_json_file.outputs.content).incompatible}}"
+        unchanged_val="${{fromJson(steps.output_json_file.outputs.content).unchanged}}"
+
+        if [[ $unchanged_val == 'true' ]]; then
+          echo "::set-output name=compare_state::no_changes"
+        elif [[ $incompatible_val == 'true' ]]; then
+          echo "::set-output name=compare_state::incompatible"
+        elif [[ $compatible_val == 'true' ]]; then
+          echo "::set-output name=compare_state::compatible"
+        fi
+      shell: bash
+    - name: "Post: Change folder own group"
+      run: sudo chown -R $USER:$USER .tmp
+      shell: bash
+    - name: "Post: Remove .tmp directory"
+      run: rm -fr .tmp
+      shell: bash
