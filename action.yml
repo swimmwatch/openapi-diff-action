@@ -13,11 +13,11 @@ inputs:
     description: "New specification filename"
     required: true
   header:
-    description: "Use given header for authorisation"
+    description: "Use given header for authorization"
     required: false
     default: ""
   query:
-    description: "Use query param for authorisation"
+    description: "Use query param for authorization"
     required: false
     default: ""
   log:
@@ -61,6 +61,7 @@ runs:
           `if [[ ${{inputs.header}} != '' ]]; then --header ${{inputs.header}}; fi` \
           `if [[ ${{inputs.query}} != '' ]]; then --query ${{inputs.query}}; fi` \
           `if [[ ${{inputs.fail-on}} != '' ]]; then --fail-on-${{inputs.fail-on}}; fi` \
+          --log ${{inputs.log}} \
           --markdown /specs/${{inputs.markdown}} \
           --json /specs/${{inputs.json}} \
           --text /specs/${{inputs.text}} \
