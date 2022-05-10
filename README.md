@@ -8,7 +8,7 @@ The following example [workflow step](https://help.github.com/en/actions/configu
 ```yml
 - name: "Find difference between OpenAPI specifications"
   id: diff_state
-  uses: swimmwatch/openapi-diff-action@v1
+  uses: swimmwatch/openapi-diff-action@v1.0.0
   with:
     old-spec: "old_spec.json"
     new-spec: "new_spec.json"
