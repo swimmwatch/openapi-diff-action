@@ -87,9 +87,16 @@ runs:
           echo "::set-output name=compare_state::compatible"
         fi
       shell: bash
-    - name: "Post: Change folder own group"
+    - name: Check file existence
+      id: check_files
+      uses: andstor/file-existence-action@v1
+      with:
+        files: ".tmp"
+    - name: "Change folder own group"
+      if: steps.check_files.outputs.files_exists == 'true'
       run: sudo chown -R $USER:$USER .tmp
       shell: bash
-    - name: "Post: Remove .tmp directory"
+    - name: "Remove .tmp directory"
+      if: steps.check_files.outputs.files_exists == 'true'
       run: rm -fr .tmp
       shell: bash
